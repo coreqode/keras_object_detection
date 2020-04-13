@@ -11,7 +11,7 @@ from utils.loss import custom_loss
 from utils.dataset import dataloader
 
 def train(model, config):
-    opt = tf.keras.optimizers.Adam(learning_rate = 0.01)
+    opt = tf.compat.v1.train.AdamOptimizer(learning_rate = 0.01)
     model.compile(loss= custom_loss, optimizer=opt)
     # monitor = 'loss'
     # reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
@@ -62,11 +62,13 @@ if __name__ == "__main__":
     tf.keras.backend.clear_session()
     TPU_WORKER = 'grpc://' + '10.12.97.242:8470'
    # tf.config.experimental_connect_to_cluster(TPU_WORKER)
-    resolver = tf.distribute.cluster_resolver.TPUClusterResolver('grpc://' + '10.12.97.242:8470')
-    tf.config.experimental_connect_to_cluster(resolver)
-    tf.tpu.experimental.initialize_tpu_system(resolver)
-    strategy = tf.distribute.experimental.TPUStrategy(resolver)
-    tf.compat.v1.disable_eager_execution() 
-    with strategy.scope():
-        model = BlazeFace(config).build_model()
-        train(model, config)
+    # resolver = tf.distribute.cluster_resolver.TPUClusterResolver('grpc://' + '10.12.97.242:8470')
+    # tf.config.experimental_connect_to_cluster(resolver)
+    # tf.tpu.experimental.initialize_tpu_system(resolver)
+    # strategy = tf.distribute.experimental.TPUStrategy(resolver)
+    # tf.compat.v1.disable_eager_execution() 
+    model = BlazeFace(config).build_model()
+    tpu_model = tf.contrib.tpu.keras_to_tpu_model( model,strategy=tf.contrib.tpu.TPUDistributionStrategy(tf.contrib.cluster_resolver.TPUClusterResolver(TPU_WORKER)))
+    # with strategy.scope():
+
+    train(model, config)
