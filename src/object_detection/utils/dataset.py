@@ -20,6 +20,7 @@ class Uplara():
         self.foot_id = self.dataset['foot_id']
         self.image_size = config.input_shape
         self.config = config
+#        print(len(self.foot_id))
 
     def __getitem__(self, idx):
         image_path = self.config.image_dir + str(self.foot_id[idx]) +"_" + str(self.dataset['angle'][idx]) +".jpg" 
