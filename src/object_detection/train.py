@@ -60,11 +60,13 @@ if __name__ == "__main__":
     config = args.parse_args()
 
     # model = BlazeFace(config).build_model()
-    TPU_WORKER = 'grpc://' + '10.12.97.242:8470'
+    
     tf.keras.backend.clear_session()
-    resolver = tf.contrib.cluster_resolver.TPUClusterResolver(tpu=TPU_WORKER)
-    tf.contrib.distribute.initialize_tpu_system(resolver)
-    strategy = tf.contrib.distribute.TPUStrategy(resolver)
+    TPU_WORKER = 'grpc://' + '10.12.97.242:8470'
+    tf.config.experimental_connect_to_host(TPU_WORKER)
+    resolver = tf.distribute.cluster_resolver.TPUClusterResolver('grpc://' + '10.12.97.242:8470'])
+    tf.tpu.experimental.initialize_tpu_system(resolver)
+    strategy = tf.distribute.experimental.TPUStrategy(resolver) 
     with strategy.scope():
         model = BlazeFace(config).build_model()
         train(model, config)
