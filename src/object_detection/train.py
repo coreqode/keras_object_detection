@@ -63,13 +63,13 @@ if __name__ == "__main__":
     # model = BlazeFace(config).build_model()
     
     tf.keras.backend.clear_session()
-    # TPU_WORKER = 'grpc://' + '10.12.97.242:8470'
-   # tf.config.experimental_connect_to_cluster(TPU_WORKER)
-    # resolver = tf.distribute.cluster_resolver.TPUClusterResolver('grpc://' + '10.12.97.242:8470')
-    # tf.config.experimental_connect_to_cluster(resolver)
-    # tf.tpu.experimental.initialize_tpu_system(resolver)
-    # strategy = tf.distribute.experimental.TPUStrategy(resolver)
-    # tf.compat.v1.disable_eager_execution() 
+    TPU_WORKER = 'grpc://' + '10.12.97.242:8470'
+   tf.config.experimental_connect_to_cluster(TPU_WORKER)
+    resolver = tf.distribute.cluster_resolver.TPUClusterResolver('grpc://' + '10.12.97.242:8470')
+    tf.config.experimental_connect_to_cluster(resolver)
+    tf.tpu.experimental.initialize_tpu_system(resolver)
+    strategy = tf.distribute.experimental.TPUStrategy(resolver)
+    tf.compat.v1.disable_eager_execution() 
     model = BlazeFace(config).build_model()
     # tpu_model = tf.contrib.tpu.keras_to_tpu_model( model,strategy=tf.contrib.tpu.TPUDistributionStrategy(tf.contrib.cluster_resolver.TPUClusterResolver(TPU_WORKER)))
     # with strategy.scope():
