@@ -12,8 +12,7 @@ from utils.dataset import dataloader
 from utils.read_tfrecord import create_dataset
 
 def train(model, config):
-    opt = tf.keras.optimizers.Adam(learning_rate = config.learning_rate)
-    model.compile(loss= custom_loss, optimizer=opt)
+
     # monitor = 'loss'
     # reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
     #     monitor=monitor, patience=4)
@@ -73,4 +72,7 @@ if __name__ == "__main__":
     # tpu_model = tf.contrib.tpu.keras_to_tpu_model( model,strategy=tf.contrib.tpu.TPUDistributionStrategy(tf.contrib.cluster_resolver.TPUClusterResolver(TPU_WORKER)))
     with strategy.scope():
         model = BlazeFace(config).build_model()
-        train(model, config)
+        opt = tf.keras.optimizers.Adam(learning_rate = config.learning_rate)
+        model.compile(loss= custom_loss, optimizer=opt)
+
+    train(model, config)
