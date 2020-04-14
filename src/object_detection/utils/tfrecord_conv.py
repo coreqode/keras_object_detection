@@ -98,15 +98,15 @@ if __name__ == "__main__":
     args.add_argument('--val_batch_size', type=int, default=128)
     args.add_argument('--train', type=bool, default=True)
     args.add_argument('--checkpoint_path', type=str, default="./checkpoint/best_model.ckpt")
-    args.add_argument('--dataset_path', type=str, default="/home/noldsoul/Desktop/Uplara/MobileNet_ObjectDetection/src/phase1/utils/augmented_dataset.csv")
-    args.add_argument('--image_dir', type=str, default="/home/noldsoul/Desktop/Uplara/MobileNet_ObjectDetection/src/phase1/utils/augmented_images/")
+    args.add_argument('--dataset_path', type=str, default="/home/chan/data/augmented_dataset_300k.csv")
+    args.add_argument('--image_dir', type=str, default="/home/chan/data/augmented_images_300k/")
 
     config = args.parse_args()
     dataset = Uplara(config)
 
 
-    TRAIN_FILEPATH =  "./trainset.record"
-    VAL_FILEPATH =  "./valset.record"
+    TRAIN_FILEPATH =  "gs://chandradeep_data/trainset_300k.record"
+    VAL_FILEPATH =  "gs://chandradeep_data/valset_300k.record"
     trainwriter = tf.io.TFRecordWriter(TRAIN_FILEPATH)
     valwriter = tf.io.TFRecordWriter(VAL_FILEPATH)
     # Define the features of your tfrecord
@@ -117,6 +117,7 @@ if __name__ == "__main__":
 
     # for trainset
     for i in train_indices:
+        print("processing :", i)
         image, label = dataset[i]
         feature = {'image':  _bytes_feature(tf.compat.as_bytes(image.tostring())),
                 'l_prob':  _float32_feature(float(label[0])),
@@ -139,6 +140,7 @@ if __name__ == "__main__":
     
     #for valset
     for i in val_indices:
+        print("processing :", i)
         image, label = dataset[i]
         feature = {'image':  _bytes_feature(tf.compat.as_bytes(image.tostring())),
                 'l_prob':  _float32_feature(float(label[0])),
