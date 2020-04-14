@@ -11,34 +11,18 @@ from utils.loss import custom_loss
 from utils.dataset import dataloader
 from utils.read_tfrecord import create_dataset
 
-def train(model, config):
+def scheduler(epoch):
+    if epoch < 5:
+        return 0.045
+    else:
+        return 0.045 * tf.math.exp(0.1 * (10 - epoch))
 
-    # monitor = 'loss'
-    # reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
-    #     monitor=monitor, patience=4)
-    early_stopping = tf.keras.callbacks.EarlyStopping(
-                    monitor='val_loss', min_delta=0, patience=5, verbose=0, mode='min',
-                    baseline=None, restore_best_weights=True
-                )
-    
-#    checkpoint = tf.keras.callbacks.ModelCheckpoint(
- #               config.checkpoint_path, monitor='val_loss', verbose=0, save_best_only=False,
-  #              save_weights_only=True, mode='min', save_freq='epoch')
-    
-    train_gen = create_dataset(config.train_batch_size, config.trainset_path, config.shuffle_buffer)
-    STEP_SIZE_TRAIN = int((0.95 * config.num_data) // config.train_batch_size)
-    val_gen = create_dataset(config.val_batch_size, config.valset_path, config.shuffle_buffer)
-    STEP_SIZE_VAL = int((0.05 * config.num_data) // config.val_batch_size)
-
-    res = model.fit(x=train_gen[0], y = train_gen[1], epochs = config.epochs, 
-                                    steps_per_epoch = STEP_SIZE_TRAIN,
-                                    validation_data = val_gen,
-                                    validation_steps = STEP_SIZE_VAL,
-                                    callbacks = [early_stopping, checkpoint],
-                                    verbose=1,
-                                    shuffle=True,
-                                    use_multiprocessing=False)
-    # print(res.values)
+class CustomModelCheckpoint(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        # logs is a dictionary
+        print(f"epoch: {epoch}, train_loss: {logs['train_loss']}, valid_loss: {logs['val_loss']}")
+        if logs['val_loss'] < logs['train_loss']:
+            self.model.save('model_300k.h5', overwrite=True)
 
 if __name__ == "__main__":
 
@@ -74,27 +58,29 @@ if __name__ == "__main__":
         model = BlazeFace(config).build_model()
         opt = tf.keras.optimizers.Adam(learning_rate = config.learning_rate)
         model.compile(loss= custom_loss, optimizer=opt)
-        early_stopping = tf.keras.callbacks.EarlyStopping(
-                        monitor='val_loss', min_delta=0, patience=10, verbose=1, mode='min',
-                        baseline=None, restore_best_weights=True
-                    )
+    early_stopping = tf.keras.callbacks.EarlyStopping(
+                    monitor='val_loss', min_delta=0, patience=10, verbose=1, mode='min',
+                    baseline=None, restore_best_weights=True
+                )
+    lr_scheduler = tf.keras.callbacks.LearningRateScheduler(scheduler)
+    cbk = CustomModelCheckpoint()
         
        # checkpoint = tf.keras.callbacks.ModelCheckpoint(
         #            config.checkpoint_path, monitor='val_loss', verbose=1, save_best_only=True,
          #           save_weights_only=False, mode='min', save_freq='epoch')
         
-        train_gen = create_dataset(config.train_batch_size, config.trainset_path, config.shuffle_buffer)
-        STEP_SIZE_TRAIN = int((0.95 * config.num_data) // config.train_batch_size)
-        val_gen = create_dataset(config.val_batch_size, config.valset_path, config.shuffle_buffer)
-        STEP_SIZE_VAL = int((0.05 * config.num_data) // config.val_batch_size)
+    train_gen = create_dataset(config.train_batch_size, config.trainset_path, config.shuffle_buffer)
+    STEP_SIZE_TRAIN = int((0.95 * config.num_data) // config.train_batch_size)
+    val_gen = create_dataset(config.val_batch_size, config.valset_path, config.shuffle_buffer)
+    STEP_SIZE_VAL = int((0.05 * config.num_data) // config.val_batch_size)
 
-        model.fit(x=train_gen, epochs = config.epochs, 
-                                        steps_per_epoch = STEP_SIZE_TRAIN,
-                                        validation_data = val_gen,
-                                        validation_steps = STEP_SIZE_VAL,
-                                        callbacks = [early_stopping],
-                                        verbose=1,
-                                        shuffle=True,
-                                        use_multiprocessing=False)
-        model.save("./model_300k.h5")
+    model.fit(x=train_gen, epochs = config.epochs, 
+                                    steps_per_epoch = STEP_SIZE_TRAIN,
+                                    validation_data = val_gen,
+                                    validation_steps = STEP_SIZE_VAL,
+                                    callbacks = [early_stopping, lr_scheduler, cbk],
+                                    verbose=1,
+                                    shuffle=True,
+                                    use_multiprocessing=False)
+    # model.save("./model_300k.h5")
     # train(model, config)
