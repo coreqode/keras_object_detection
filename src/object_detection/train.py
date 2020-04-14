@@ -20,9 +20,8 @@ def scheduler(epoch):
 class CustomModelCheckpoint(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         # logs is a dictionary
-        print(f"epoch: {epoch}, train_loss: {logs['train_loss']}, valid_loss: {logs['val_loss']}")
-        if logs['val_loss'] < logs['train_loss']:
-            self.model.save('model_300k.h5', overwrite=True)
+        if logs['val_loss'] < logs['loss']:
+            self.model.save_weights('./model_300k.hdf5', overwrite=True)
 
 if __name__ == "__main__":
 
@@ -46,14 +45,12 @@ if __name__ == "__main__":
 
     tf.keras.backend.clear_session()
     TPU_WORKER = 'grpc://' + '10.108.85.226:8470'
-    # tf.config.experimental_connect_to_cluster(TPU_WORKER)
     resolver = tf.distribute.cluster_resolver.TPUClusterResolver(TPU_WORKER)
     tf.config.experimental_connect_to_cluster(resolver)
     tf.tpu.experimental.initialize_tpu_system(resolver)
     strategy = tf.distribute.experimental.TPUStrategy(resolver)
 #    tf.compat.v1.disable_eager_execution() 
 
-    # tpu_model = tf.contrib.tpu.keras_to_tpu_model( model,strategy=tf.contrib.tpu.TPUDistributionStrategy(tf.contrib.cluster_resolver.TPUClusterResolver(TPU_WORKER)))
     with strategy.scope():
         model = BlazeFace(config).build_model()
         opt = tf.keras.optimizers.Adam(learning_rate = config.learning_rate)
@@ -64,11 +61,7 @@ if __name__ == "__main__":
                 )
     lr_scheduler = tf.keras.callbacks.LearningRateScheduler(scheduler)
     cbk = CustomModelCheckpoint()
-        
-       # checkpoint = tf.keras.callbacks.ModelCheckpoint(
-        #            config.checkpoint_path, monitor='val_loss', verbose=1, save_best_only=True,
-         #           save_weights_only=False, mode='min', save_freq='epoch')
-        
+
     train_gen = create_dataset(config.train_batch_size, config.trainset_path, config.shuffle_buffer)
     STEP_SIZE_TRAIN = int((0.95 * config.num_data) // config.train_batch_size)
     val_gen = create_dataset(config.val_batch_size, config.valset_path, config.shuffle_buffer)
@@ -82,5 +75,3 @@ if __name__ == "__main__":
                                     verbose=1,
                                     shuffle=True,
                                     use_multiprocessing=False)
-    # model.save("./model_300k.h5")
-    # train(model, config)
