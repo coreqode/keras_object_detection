@@ -131,18 +131,13 @@ class BlazeFace():
     def build_model(self):
 
         model = self.feature_extractor
-        conf_layer = tf.keras.layers.Conv2D(filters=2,
+        output_layer = tf.keras.layers.Conv2D(filters=96,
                                             kernel_size=3,
-                                            padding='same',
-                                            activation='sigmoid')(model.output)
-        conf_layer_flatten = tf.keras.layers.Flatten()(conf_layer)
-        conf_layer_dense = tf.keras.layers.Dense(2)(conf_layer_flatten)
-    
-        loc_layer = tf.keras.layers.Conv2D(filters= 8,
-                                        kernel_size=3,
-                                        padding='same')(model.output)
-        loc_layer_flatten = tf.keras.layers.Flatten()(loc_layer)
-        loc_layer_dense = tf.keras.layers.Dense(8, activation = 'relu')(loc_layer_flatten)
+                                            strides = 2,
+                                            padding='same')(model.output)
+        output_layer_flatten = tf.keras.layers.Flatten()(output_layer)
+        conf_layer_dense = tf.keras.layers.Dense(2, activation = 'sigmoid')(output_layer_flatten)
+        loc_layer_dense = tf.keras.layers.Dense(8, activation = 'relu')(output_layer_flatten)
 
         output = tf.keras.layers.concatenate([conf_layer_dense, loc_layer_dense], axis = -1)
         return tf.keras.models.Model(model.input, output )
