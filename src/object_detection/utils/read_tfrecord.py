@@ -22,20 +22,24 @@ def _parse_function(proto):
                     ,parsed_features['l_width'],parsed_features['l_height'],parsed_features['r_center_x'],parsed_features['r_center_y'],
                     parsed_features['r_width'],parsed_features['r_height']]
     # Turn your saved image string into an array
-    parsed_features['image'] = tf.io.decode_raw(
+    image = tf.io.decode_raw(
         parsed_features['image'], tf.uint8)
-    return parsed_features['image'], all_features
+
+    image = tf.cast(tf.reshape(image, (224, 224, 3)), tf.float32)
+    image = (image / 127.5) - 1 
+    
+    return image, all_features
 
 def create_dataset(batch_size, filepath, shuffle_buffer):
     dataset = tf.data.TFRecordDataset(filepath)
-    dataset = dataset.map(_parse_function)
+    dataset = dataset.map(_parse_function, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.repeat()
     dataset = dataset.shuffle(shuffle_buffer)
     dataset = dataset.batch(batch_size)
-    iterator = iter(dataset)
-    image, labels= iterator.get_next()
-    image = tf.reshape(image, [-1, 224, 224, 3])
-    return image, labels
+    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+    # iterator = iter(dataset)
+    # image, labels= iterator.get_next()
+    return dataset
 
 if __name__ == "__main__":
     dataset = create_dataset("/home/noldsoul/Desktop/Uplara/keras_object_detection/src/object_detection/utils/trainset.record")
