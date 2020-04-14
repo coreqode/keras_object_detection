@@ -12,7 +12,7 @@ from utils.dataset import dataloader
 from utils.read_tfrecord import create_dataset
 
 def train(model, config):
-    opt = tf.keras.optimizers.Adam  (learning_rate = 0.0001)
+    opt = tf.keras.optimizers.Adam(learning_rate = config.learning_rate)
     model.compile(loss= custom_loss, optimizer=opt)
     # monitor = 'loss'
     # reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
@@ -49,6 +49,7 @@ if __name__ == "__main__":
     args.add_argument('--train_batch_size', type=int, default=8)
     args.add_argument('--val_batch_size', type=int, default=8)
     args.add_argument('--epochs', type=int, default=100)
+    args.add_argument('--learning_rate', type=int, default=0.01)
     args.add_argument('--num_data', type=int, default=432)
     args.add_argument('--shuffle_buffer', type=int, default=64)
     args.add_argument('--train', type=bool, default=True)
@@ -60,17 +61,16 @@ if __name__ == "__main__":
 
     config = args.parse_args()
 
-    # model = BlazeFace(config).build_model()
-    
     tf.keras.backend.clear_session()
     TPU_WORKER = 'grpc://' + '10.12.97.242:8470'
-   tf.config.experimental_connect_to_cluster(TPU_WORKER)
-    resolver = tf.distribute.cluster_resolver.TPUClusterResolver('grpc://' + '10.12.97.242:8470')
+    # tf.config.experimental_connect_to_cluster(TPU_WORKER)
+    resolver = tf.distribute.cluster_resolver.TPUClusterResolver(TPU_WORKER)
     tf.config.experimental_connect_to_cluster(resolver)
     tf.tpu.experimental.initialize_tpu_system(resolver)
     strategy = tf.distribute.experimental.TPUStrategy(resolver)
-    tf.compat.v1.disable_eager_execution() 
-    model = BlazeFace(config).build_model()
+    #tf.compat.v1.disable_eager_execution() 
+
     # tpu_model = tf.contrib.tpu.keras_to_tpu_model( model,strategy=tf.contrib.tpu.TPUDistributionStrategy(tf.contrib.cluster_resolver.TPUClusterResolver(TPU_WORKER)))
-    # with strategy.scope():
-    train(model, config)
+    with strategy.scope():
+        model = BlazeFace(config).build_model()
+        train(model, config)
