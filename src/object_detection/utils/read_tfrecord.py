@@ -34,7 +34,8 @@ def create_dataset(batch_size, filepath, shuffle_buffer):
     dataset = tf.data.TFRecordDataset(filepath)
     dataset = dataset.map(_parse_function, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.repeat()
-    dataset = dataset.shuffle(shuffle_buffer)
+    if shuffle_buffer:
+        dataset = dataset.shuffle(shuffle_buffer)
     dataset = dataset.batch(batch_size, drop_remainder = True)
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     # iterator = iter(dataset)
@@ -52,3 +53,22 @@ if __name__ == "__main__":
         print(labels.shape)
         plt.imshow(image)
         plt.show()
+
+    # for image, label in dataset.take(1):
+    #     image = image[0]
+    #     label = label[0]
+    #     image = np.array(image)
+    #     lxmin = int(label[2] - label[4] / 2)
+    #     lxmax = int(label[2] + label[4] / 2)
+    #     lymin = int(label[3] - label[5] / 2)
+    #     lymax = int(label[3] + label[5] / 2)
+    #     cv2.rectangle(image, (lxmin, lymin), (lxmax, lymax), (0,255,0), 2)
+    #     rxmin = int(label[6] - label[8] / 2)
+    #     rxmax = int(label[6] + label[8] / 2)
+    #     rymin = int(label[7] - label[9] / 2)
+    #     rymax = int(label[7] + label[9] / 2)
+    #     cv2.rectangle(image, (rxmin, rymin), (rxmax, rymax), (0,255,0), 2)
+    #     cv2.imshow('image', image)
+    #     if cv2.waitKey() & 0xFF == ord('q'):
+    #             break
+    #             # plt.show()
