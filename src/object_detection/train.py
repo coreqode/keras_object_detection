@@ -6,7 +6,8 @@ import glob
 import os
 import time
 import argparse
-from model.Net import BlazeFace
+from model.BlazeFace import BlazeFace
+from model.MobileNetV2 import MobileNetV2
 from utils.loss import custom_loss
 from utils.dataset import dataloader
 from utils.read_tfrecord import create_dataset
@@ -38,6 +39,7 @@ if __name__ == "__main__":
     args.add_argument('--num_data', type=int, default=423)
     args.add_argument('--shuffle_buffer', type=int, default=2048)
     args.add_argument('--train', type=bool, default=True)
+    args.add_argument('--inference', type=bool, default=False)
     args.add_argument('--checkpoint_path', type=str, default="gs://chandradeep_data/best_model.ckpt")
     # args.add_argument('--dataset_path', type=str, default="/home/chan/data/augmented_dataset_300k.csv")
     # args.add_argument('--image_dir', type=str, default="/home/chan/data/augmented_images_300k/")
@@ -48,7 +50,8 @@ if __name__ == "__main__":
 
     tf.keras.backend.clear_session()
 
-    model = BlazeFace(config).build_model()
+    # model = BlazeFace(config).build_model()
+    model = MobileNetV2(config).build_model()
     opt = tf.keras.optimizers.Adam(learning_rate = config.learning_rate)
     model.compile(loss= custom_loss, optimizer=opt)
     early_stopping = tf.keras.callbacks.EarlyStopping(
