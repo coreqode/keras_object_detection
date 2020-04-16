@@ -6,7 +6,8 @@ import glob
 import os
 import time
 import argparse
-from model.Net import BlazeFace
+from model.BlazeFace import BlazeFace
+from model.MobileNet import MobileNetV2
 from utils.loss import custom_loss
 from utils.dataset import dataloader
 from utils.read_tfrecord import create_dataset
@@ -52,7 +53,8 @@ if __name__ == "__main__":
 #    tf.compat.v1.disable_eager_execution() 
 
     with strategy.scope():
-        model = BlazeFace(config).build_model()
+        # model = BlazeFace(config).build_model()
+        model = MobileNetV2(config).build_model()
         opt = tf.keras.optimizers.Adam(learning_rate = config.learning_rate)
         model.compile(loss= custom_loss, optimizer=opt)
     early_stopping = tf.keras.callbacks.EarlyStopping(
