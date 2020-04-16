@@ -35,7 +35,7 @@ def create_dataset(batch_size, filepath, shuffle_buffer):
     dataset = dataset.map(_parse_function, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.repeat()
     dataset = dataset.shuffle(shuffle_buffer)
-    dataset = dataset.batch(batch_size)
+    dataset = dataset.batch(batch_size, drop_remainder = True)
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     # iterator = iter(dataset)
     # image, labels= iterator.get_next()

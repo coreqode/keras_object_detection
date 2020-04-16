@@ -136,7 +136,7 @@ class BlazeFace():
                                             strides = 2,
                                             padding='same')(model.output)
         output_layer_flatten = tf.keras.layers.Flatten()(output_layer)
-        conf_layer_dense = tf.keras.layers.Dense(2, activation = 'sigmoid')(output_layer_flatten)
+        conf_layer_dense = tf.keras.layers.Dense(2, activation = 'sigmoid')(model.output)
         loc_layer_dense = tf.keras.layers.Dense(8, activation = 'relu')(output_layer_flatten)
 
         output = tf.keras.layers.concatenate([conf_layer_dense, loc_layer_dense], axis = -1)
