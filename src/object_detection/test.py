@@ -7,6 +7,7 @@ from model.BlazeFace import BlazeFace
 from model.MobileNetV2 import MobileNetV2
 import argparse
 from utils.dataset import *
+import pandas as pd
 from PIL import Image
 
 class Uplara():
@@ -20,7 +21,7 @@ class Uplara():
         self.train_from_augmentation = train_from_augmentation
         self.image_path = image_path
     def __getitem__(self, idx):
-        print(self.foot_id[idx])
+        # print(self.foot_id[idx])
         # image = Image.open(urllib.request.urlopen(self.image_url[idx]))  #when scrapping images directly
         image_path = self.image_path + str(self.foot_id[idx]) + ".jpg"  #Using already scrapped images
         image = Image.open(image_path)
@@ -76,7 +77,7 @@ class Uplara():
         boxes = [l_box, r_box]
         labels = [l_prob, r_prob]
         target = self.encoder(boxes, labels)
-        return image, boxes, labels
+        return image, boxes, labels, target,  self.foot_id[idx]
 
     def encoder(self, boxes, labels):
         target = np.zeros(( 10))
@@ -106,33 +107,19 @@ class Uplara():
         return len(self.foot_id)
 
 
-
-
-if __name__ == "__main__":
-    args = argparse.ArgumentParser()
-    # hyperparameters
-    args.add_argument('--input_shape', type=int, default=224)
-    args.add_argument('--train_batch_size', type=int, default=1)
-    args.add_argument('--val_batch_size', type=int, default=1)
-    args.add_argument('--epochs', type=int, default= 10)
-    args.add_argument('--learning_rate', type=int, default=0.001)
-    args.add_argument('--num_data', type=int, default=423)
-    args.add_argument('--shuffle_buffer', type=int, default=2048)
-    args.add_argument('--train', type=bool, default=True)
-    args.add_argument('--checkpoint_path', type=str, default="gs://chandradeep_data/best_model.ckpt")
-    args.add_argument('--dataset_path', type=str, default="/home/noldsoul/Desktop/Uplara/dataset/newest.csv")
-    args.add_argument('--image_dir', type=str, default="/home/noldsoul/Desktop/Uplara/dataset/uplara_images/")
-    args.add_argument('--trainset_path', type=str, default="/home/noldsoul/Desktop/Uplara/keras_object_detection/src/object_detection/utils/trainset_300k.record")
-    args.add_argument('--valset_path', type=str, default="/home/noldsoul/Desktop/Uplara/keras_object_detection/src/object_detection/utils/valset_300k.record")
-    config = args.parse_args()
-
-    with tf.device("/CPU"):
-        dataset = Uplara(config.dataset_path, config.image_dir)
-        model = MobileNetV2(config).build_model()
-        model.load_weights("/home/noldsoul/Downloads/model_300k (2).hdf5")
-        model.summary()
-        for i in range(200):
-            image, boxes, labels  = dataset[i]
+def worst_cases(reg_losses):
+        print(reg_losses)
+        sorted_reg_losses = sorted(reg_losses, reverse = True)
+        top_200 = sorted_reg_losses[:200]
+        print(sorted_reg_losses)
+        top_200_indices = []
+        for i in top_200:
+            top_200_indices.append(reg_losses.index(i))
+        print(top_200_indices)
+        index = 0
+        for i in top_200_indices:
+            print(i)
+            image, boxes, labels, target, foot_id  = dataset[i]
             orig_frame = image
             image = image.astype('float32')
             image = (image / 127.5 ) - 1
@@ -157,23 +144,97 @@ if __name__ == "__main__":
 
             g_l_xmin, g_l_ymin, g_l_xmax, g_l_ymax = boxes[0][0], boxes[0][1], boxes[0][2], boxes[0][3]
             g_r_xmin, g_r_ymin, g_r_xmax, g_r_ymax = boxes[1][0], boxes[1][1], boxes[1][2], boxes[1][3]
-            
+
             if not (labels[0]==0):
                 cv2.rectangle(orig_frame,(g_l_xmin, g_l_ymin), (g_l_xmax, g_l_ymax), (255,0,0), 2 )
                 cv2.putText(orig_frame, 'Left', (g_l_xmin, g_l_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,0,0), 1)
             if not (labels[1]==0):
                 cv2.rectangle(orig_frame,(g_r_xmin, g_r_ymin), (g_r_xmax, g_r_ymax), (255,0,0), 2 )
                 cv2.putText(orig_frame, 'Right', (g_r_xmin, g_r_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,0,0), 1)
+            image = Image.fromarray(orig_frame)
+            image.save("/home/noldsoul/Desktop/Uplara/keras_object_detection/src/object_detection/worst_cases/"+ str(index) + "_worst_cases" +".jpg")
+            index +=1
 
-            plt.imshow(orig_frame)
-            plt.show()
+
+if __name__ == "__main__":
+    args = argparse.ArgumentParser()
+    # hyperparameters
+    args.add_argument('--input_shape', type=int, default=224)
+    args.add_argument('--train_batch_size', type=int, default=1)
+    args.add_argument('--val_batch_size', type=int, default=1)
+    args.add_argument('--epochs', type=int, default= 10)
+    args.add_argument('--learning_rate', type=int, default=0.001)
+    args.add_argument('--num_data', type=int, default=423)
+    args.add_argument('--shuffle_buffer', type=int, default=2048)
+    args.add_argument('--train', type=bool, default=True)
+    args.add_argument('--checkpoint_path', type=str, default="gs://chandradeep_data/best_model.ckpt")
+    args.add_argument('--dataset_path', type=str, default="/home/noldsoul/Desktop/Uplara/dataset/newest.csv")
+    args.add_argument('--image_dir', type=str, default="/home/noldsoul/Desktop/Uplara/dataset/uplara_images/")
+    args.add_argument('--trainset_path', type=str, default="/home/noldsoul/Desktop/Uplara/keras_object_detection/src/object_detection/utils/trainset_300k.record")
+    args.add_argument('--valset_path', type=str, default="/home/noldsoul/Desktop/Uplara/keras_object_detection/src/object_detection/utils/valset_300k.record")
+    config = args.parse_args()
+
+    with tf.device("/CPU"):
+        dataset = Uplara(config.dataset_path, config.image_dir)
+        model = MobileNetV2(config).build_model()
+        model.load_weights("/home/noldsoul/Downloads/model_300k (4).hdf5")
+        model.summary()
+        count = 0
+        reg_losses = []
+        for i in range(2000):
+            image, boxes, labels, target, foot_id  = dataset[i]
+            orig_frame = image
+            image = image.astype('float32')
+            image = (image / 127.5 ) - 1
+            image = np.expand_dims(image, axis = 0)
+            output = model.predict(image)
+            l_cx, l_cy = output[:,2], output[:,3]
+            l_width, l_height = output[:,4],output[:,5]
+            l_xmin, l_ymin = l_cx - (l_width/2), l_cy - (l_height/2)
+            l_xmax ,l_ymax = l_cx + (l_width/2), l_cy + (l_height/2) 
+            r_cx, r_cy = output[:,6], output[:,7]
+            r_width, r_height= output[:,8],  output[:,9]
+            r_xmin, r_ymin = r_cx - (r_width/2),r_cy - (r_height/2)
+            r_xmax,r_ymax = r_cx + (r_width/2),r_cy + (r_height/2)
+            l_prob, r_prob = output[:,0],output[:,1]
+
+            l_reg_loss  = np.abs(l_cx - target[2]) + np.abs(l_cy - target[3]) + np.abs(l_width - target[4]) + np.abs(l_height - target[5])
+            r_reg_loss = np.abs(r_cx - target[6]) + np.abs(r_cy - target[7]) + np.abs(r_width - target[8]) + np.abs(r_height - target[9])
+            reg_loss = l_reg_loss + r_reg_loss
+            reg_losses.append(reg_loss)
+        
+        worst_cases(reg_losses)
+    
+
+
+            # if l_prob > 0.5:
+            #     cv2.rectangle(orig_frame,(l_xmin, l_ymin), (l_xmax, l_ymax), (0,255,0), 2 )
+            #     cv2.putText(orig_frame, 'Left', (l_xmin, l_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0,255,0), 1)
+            # if r_prob > 0.5:
+            #     cv2.rectangle(orig_frame,(r_xmin, r_ymin), (r_xmax, r_ymax), (0,255,0), 2 )
+            #     cv2.putText(orig_frame, 'Right', (r_xmin, r_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0,255,0), 1)
+
+            # g_l_xmin, g_l_ymin, g_l_xmax, g_l_ymax = boxes[0][0], boxes[0][1], boxes[0][2], boxes[0][3]
+            # g_r_xmin, g_r_ymin, g_r_xmax, g_r_ymax = boxes[1][0], boxes[1][1], boxes[1][2], boxes[1][3]
+
+
+            # if not (labels[0]==0):
+            #     cv2.rectangle(orig_frame,(g_l_xmin, g_l_ymin), (g_l_xmax, g_l_ymax), (255,0,0), 2 )
+            #     cv2.putText(orig_frame, 'Left', (g_l_xmin, g_l_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,0,0), 1)
+            # if not (labels[1]==0):
+            #     cv2.rectangle(orig_frame,(g_r_xmin, g_r_ymin), (g_r_xmax, g_r_ymax), (255,0,0), 2 )
+            #     cv2.putText(orig_frame, 'Right', (g_r_xmin, g_r_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,0,0), 1)
+
+            # # plt.imshow(orig_frame)
+            # # plt.show()
             # image = Image.fromarray(orig_frame)
-            # image.save("/home/noldsoul/Desktop/Uplara/MobileNet_ObjectDetection/src/phase1/results/"+ str(foot_id) +".jpg")
+            # print(foot_id)
+            # image.save("/home/noldsoul/Desktop/Uplara/keras_object_detection/src/object_detection/results/"+ str(foot_id) +".jpg")
             # if count > 200:
             #     break
-            # count +=1
-                # plt.imshow(image.astype(np.uint8))
-                # plt.show()
-                # image = (image[0] / 255 ) - 1
-                # plt.imshow(image)
-                # plt.show(image)
+            # # count +=1
+            #     # plt.imshow(image.astype(np.uint8))
+            #     # plt.show()
+            #     # image = (image[0] / 255 ) - 1
+            #     # plt.imshow(image)
+            #     # plt.show(image)

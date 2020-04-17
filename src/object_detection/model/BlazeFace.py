@@ -2,6 +2,8 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 import logging
 import numpy as np 
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Activation, Conv2D, BatchNormalization, Flatten, GlobalAveragePooling2D
 
 def channel_padding(x):
     """
@@ -135,12 +137,16 @@ class BlazeFace():
                                             kernel_size=3,
                                             strides = 2,
                                             padding='same')(model.output)
-        output_layer_flatten = tf.keras.layers.Flatten()(output_layer)
-        conf_layer_dense = tf.keras.layers.Dense(2, activation = 'sigmoid')(output_layer_flatten)
-        loc_layer_dense = tf.keras.layers.Dense(8, activation = 'relu')(output_layer_flatten)
+        output = GlobalAveragePooling2D()(output_layer)
+        box = Dense(10,name="box")(output)
+        box_prob = box[:,:2]
+        box_coords = box[:,2:]
+        box_coords = tf.keras.layers.Lambda(lambda box_coords: tf.keras.activations.relu(box_coords,max_value=224))(box_coords)
+        box_prob = tf.keras.layers.Lambda(lambda box_prob: tf.keras.activations.sigmoid(box_prob))(box_prob)
 
-        output = tf.keras.layers.concatenate([conf_layer_dense, loc_layer_dense], axis = -1)
-        return tf.keras.models.Model(model.input, output )
+        out= tf.keras.layers.concatenate(inputs = [box_prob,box_coords],axis = 1)
+        model = tf.keras.models.Model(model.input, out)
+        return model
 
 if __name__ == "__main__":
     pass

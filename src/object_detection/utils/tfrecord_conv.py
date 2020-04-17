@@ -52,7 +52,7 @@ class Uplara():
         ###################### Visualize the bounding boxes ##############################
         # for visualizing the bounding boxes use, augmentation.py file
         target = self.encoder(boxes, labels)  # To get the encoding of the target
-        return image, target
+        return image, target, image_path
 
     def encoder(self, boxes, labels):
         target = np.zeros(( 10))
@@ -118,8 +118,8 @@ if __name__ == "__main__":
     # for trainset
     for i in train_indices:
         print("processing :", i)
-        image, label = dataset[i]
-        feature = {'image':  _bytes_feature(tf.compat.as_bytes(image.tostring())),
+        image, label, image_path = dataset[i]
+        feature = {'image':  _bytes_feature(tf.compat.as_bytes(open(image_path, 'rb').read())),
                 'l_prob':  _float32_feature(float(label[0])),
                 'r_prob':  _float32_feature(float(label[1])),
                 'l_center_x':  _float32_feature(float(label[2])),
@@ -141,8 +141,8 @@ if __name__ == "__main__":
     #for valset
     for i in val_indices:
         print("processing :", i)
-        image, label = dataset[i]
-        feature = {'image':  _bytes_feature(tf.compat.as_bytes(image.tostring())),
+        image, label, image_path = dataset[i]
+        feature = {'image':  _bytes_feature(tf.compat.as_bytes(open(image_path, 'rb').read())),
                 'l_prob':  _float32_feature(float(label[0])),
                 'r_prob':  _float32_feature(float(label[1])),
                 'l_center_x':  _float32_feature(float(label[2])),
