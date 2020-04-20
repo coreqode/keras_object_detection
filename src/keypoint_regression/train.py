@@ -1,106 +1,81 @@
-import torch
-import torchvision 
-from torchvision import transforms
-from torch.utils.data import DataLoader, Dataset
-import glob
-import cv2
-import matplotlib.pyplot as plt
+import tensorflow as tf
 import numpy as np
-from torch.utils.data.dataset import random_split
-import torch.optim as optim
-import torch.nn as nn
-import torch.nn.functional as F 
-from torchsummary import summary
-from PIL import Image
-from tqdm import tqdm, tnrange, tqdm_notebook
-import math
-from collections import defaultdict
-from model.Net import MobilenetV2_fully_connected
-from utils.dataset import Uplara
-from utils.loss import custom_loss, custom_loss_2d
-from utils.earlystopping import EarlyStopping
-from utils.RAdam import RAdam
-from utils.LookAhead import Lookahead
-# import wandb     
-# wandb.init(project = "MobileNet Object Detection")  ##for watching the performance of model
+import cv2
+import pickle
+import glob
+import os
+import time
+import argparse
+from model.BlazeFace import BlazeFace
+from model.MobileNetV2 import MobileNetV2
+from utils.dataset import dataloader
+from utils.read_tfrecord import create_dataset
+import matplotlib.pyplot as plt 
 
-### Checking for GPU-----------------------------------------------------------------------------------------
-train_on_gpu = torch.cuda.is_available()
-if not train_on_gpu:
-    print('CUDA is not available.  Training on CPU ...')
-else:
-    print('CUDA is available!  Training on GPU ...')
+def scheduler(epoch):
+    if epoch < 5:
+        return 0.001
+    else:
+        return float(0.001 * tf.math.exp(0.1 * (10 - epoch)))
 
-device = ('cuda' if torch.cuda.is_available() else 'cpu')
-### Preprocessing--------------------------------------------------------------------------------------
-transform = transforms.Compose([transforms.ToTensor(),
-                                transforms.Normalize((0.5, 0.5, 0.5), (0.2, 0.2, 0.2))])
+class CustomModelCheckpoint(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        # logs is a dictionary
+        if logs['val_loss'] < logs['loss']:
+            print("saving weights")
+            self.model.save_weights('model_300k.h5')
+            tf.keras.models.save_model(self.model,"complete_model.h5",overwrite=True, include_optimizer=True)
 
-dataset = Uplara("/home/noldsoul/Desktop/Uplara/MobileNet_ObjectDetection/src/phase2/utils/keypoint_dataset.csv","/home/noldsoul/Desktop/Uplara/MobileNet_ObjectDetection/src/phase2/utils/keypoints_dataset/", transform = transform, training=True)
-print(len(dataset))
-trainset, valset = random_split(dataset,[16000, 4967])
-train_loader = DataLoader(trainset, batch_size = 32, shuffle = True )
-val_loader = DataLoader(valset, batch_size =32, shuffle = False)
+if __name__ == "__main__":
 
-##Initialize the Model
-model = MobilenetV2_fully_connected(pretrained = True)
-model = model.to(device)
-# wandb.watch(model, log = 'all')
-# model.load_state_dict(torch.load('', map_location=torch.device(device)))
+    args = argparse.ArgumentParser()
+    # hyperparameters
+    args.add_argument('--input_shape', type=int, default=224)
+    args.add_argument('--train_batch_size', type=int, default=4)
+    args.add_argument('--val_batch_size', type=int, default=4)
+    args.add_argument('--epochs', type=int, default= 10)
+    args.add_argument('--learning_rate', type=int, default=0.001)
+    args.add_argument('--num_data', type=int, default=423)
+    args.add_argument('--shuffle_buffer', type=int, default=2048)
+    args.add_argument('--train', type=bool, default=True)
+    args.add_argument('--inference', type=bool, default=False)
+    args.add_argument('--checkpoint_path', type=str, default="gs://chandradeep_data/best_model.ckpt")
+    # args.add_argument('--dataset_path', type=str, default="/home/chan/data/augmented_dataset_300k.csv")
+    # args.add_argument('--image_dir', type=str, default="/home/chan/data/augmented_images_300k/")
+    args.add_argument('--trainset_path', type=str, default="/home/noldsoul/Desktop/Uplara/keras_object_detection/src/object_detection/utils/trainset_300k.record")
+    args.add_argument('--valset_path', type=str, default="/home/noldsoul/Desktop/Uplara/keras_object_detection/src/object_detection/utils/valset_300k.record")
 
-## Training the model--------------------------------------------------------------------------------
-n_epochs = 50
-patience = 5 #used for early stopping
-# optimizer = torch.optim.Adam(model.parameters(), lr = 0.0001)
-optimizer = RAdam( model.parameters(), lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-5, degenerated_to_sgd=True) #Rectified Adam
-# optimizer =  Lookahead(base_optimizer,1e-3 ,k = 6)
-train_losses = []
-val_losses = []
-early_stopping = EarlyStopping(patience=patience, verbose=True, delta = 0.005, diff =0.05)
-valid_loss_min = np.Inf
-epoch_tqdm = tqdm(total = n_epochs, desc = 'epochs')
-criterion = nn.MSELoss()
-for epoch in range(n_epochs):
-    train_tqdm = tqdm(total = len(train_loader), desc = 'training batch')
-    ###################
-    # train the model #
-    ###################
-    model.train()
-    for batch_idx, (image, target) in enumerate(train_loader):
-        if train_on_gpu:
-            image, target = image.cuda(), target.cuda()
-            model = model.cuda()
-        optimizer.zero_grad()
-        output = model.forward(image)
-        loss = criterion(output, target)
-        loss.backward()
-        optimizer.step()
-        train_losses.append(loss.item())
-        train_tqdm.update(1)
-    train_tqdm.close()
-    ######################    
-    # validate the model #
-    ######################
-    valid_tqdm = tqdm(total = len(val_loader), desc ='validation batch')
-    model.eval()
-    threshold = []
-    for batch_idx,(image, target) in enumerate(val_loader):
-        if train_on_gpu:
-            image, target = image.cuda(), target.cuda()
-        output = model(image)
-        loss = criterion(output, target)
-        val_losses.append(loss.item())
-        valid_tqdm.update(1)
-    valid_tqdm.close()
-    train_loss = np.average(train_losses)
-    val_loss = np.average(val_losses)
-    print('Epoch: {} \tTraining Loss: {:.6f} \tValidation Loss: {:.6f}'.format(
-        epoch+1, train_loss, val_loss,))
-    train_losses = []
-    val_losses = []
-    early_stopping(val_loss, model, train_loss)
-    # wandb.log({"Training Loss per epoch": train_loss, "validation Loss per epoch": val_loss})
-    if early_stopping.early_stop:
-      print('Early Stopping')
-      break
-    epoch_tqdm.update(1)
+    config = args.parse_args()
+
+    tf.keras.backend.clear_session()
+
+    model = BlazeFace(config).build_model()
+    print(model.summary())
+    # model = MobileNetV2(config).build_model()
+    opt = tf.keras.optimizers.Adam(learning_rate = config.learning_rate)
+    model.compile(loss= tf.keras.losses.MeanSquaredError(), optimizer=opt)
+    early_stopping = tf.keras.callbacks.EarlyStopping(
+                    monitor='val_loss', min_delta=0, patience=10, verbose=1, mode='min',
+                    baseline=None, restore_best_weights=True
+                )
+    
+    tensorboard = tf.keras.callbacks.TensorBoard(log_dir='logs', histogram_freq=0, write_graph=True)
+    lr_scheduler = tf.keras.callbacks.LearningRateScheduler(scheduler)
+    cbk = CustomModelCheckpoint()
+
+    train_gen = create_dataset(config.train_batch_size, config.trainset_path, config.shuffle_buffer)
+
+    STEP_SIZE_TRAIN = int((0.95 * config.num_data) // config.train_batch_size)
+    val_gen = create_dataset(config.val_batch_size, config.valset_path, config.shuffle_buffer)
+    STEP_SIZE_VAL = int((0.05 * config.num_data) // config.val_batch_size)
+
+    history = model.fit(x=train_gen, epochs = config.epochs, 
+                                    steps_per_epoch = STEP_SIZE_TRAIN,
+                                    validation_data = val_gen,
+                                    validation_steps = STEP_SIZE_VAL,
+                                    callbacks = [ lr_scheduler, tensorboard],
+                                    verbose=1,
+                                    shuffle=True,
+                                    use_multiprocessing=False)
+    # print(history)
+
