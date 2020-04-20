@@ -50,14 +50,17 @@ if __name__ == "__main__":
 
     tf.keras.backend.clear_session()
 
-    # model = BlazeFace(config).build_model()
-    model = MobileNetV2(config).build_model()
+    model = BlazeFace(config).build_model()
+    print(model.summary())
+    # model = MobileNetV2(config).build_model()
     opt = tf.keras.optimizers.Adam(learning_rate = config.learning_rate)
     model.compile(loss= custom_loss, optimizer=opt)
     early_stopping = tf.keras.callbacks.EarlyStopping(
                     monitor='val_loss', min_delta=0, patience=10, verbose=1, mode='min',
                     baseline=None, restore_best_weights=True
                 )
+    
+    tensorboard = tf.keras.callbacks.TensorBoard(log_dir='logs', histogram_freq=0, write_graph=True)
     lr_scheduler = tf.keras.callbacks.LearningRateScheduler(scheduler)
     cbk = CustomModelCheckpoint()
 
@@ -71,7 +74,7 @@ if __name__ == "__main__":
                                     steps_per_epoch = STEP_SIZE_TRAIN,
                                     validation_data = val_gen,
                                     validation_steps = STEP_SIZE_VAL,
-                                    callbacks = [early_stopping, lr_scheduler, cbk],
+                                    callbacks = [ lr_scheduler, tensorboard],
                                     verbose=1,
                                     shuffle=True,
                                     use_multiprocessing=False)

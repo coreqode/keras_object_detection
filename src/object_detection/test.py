@@ -176,8 +176,9 @@ if __name__ == "__main__":
 
     with tf.device("/CPU"):
         dataset = Uplara(config.dataset_path, config.image_dir)
-        model = MobileNetV2(config).build_model()
-        model.load_weights("/home/noldsoul/Downloads/model_300k (4).hdf5")
+        # model = MobileNetV2(config).build_model()
+        model = BlazeFace(config).build_model()
+        model.load_weights("/home/noldsoul/Downloads/blazenet_model_300k_0.32.hdf5")
         model.summary()
         count = 0
         reg_losses = []
@@ -203,38 +204,38 @@ if __name__ == "__main__":
             reg_loss = l_reg_loss + r_reg_loss
             reg_losses.append(reg_loss)
         
-        worst_cases(reg_losses)
+        # worst_cases(reg_losses)
     
 
 
-            # if l_prob > 0.5:
-            #     cv2.rectangle(orig_frame,(l_xmin, l_ymin), (l_xmax, l_ymax), (0,255,0), 2 )
-            #     cv2.putText(orig_frame, 'Left', (l_xmin, l_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0,255,0), 1)
-            # if r_prob > 0.5:
-            #     cv2.rectangle(orig_frame,(r_xmin, r_ymin), (r_xmax, r_ymax), (0,255,0), 2 )
-            #     cv2.putText(orig_frame, 'Right', (r_xmin, r_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0,255,0), 1)
+            if l_prob > 0.5:
+                cv2.rectangle(orig_frame,(l_xmin, l_ymin), (l_xmax, l_ymax), (0,255,0), 2 )
+                cv2.putText(orig_frame, 'Left', (l_xmin, l_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0,255,0), 1)
+            if r_prob > 0.5:
+                cv2.rectangle(orig_frame,(r_xmin, r_ymin), (r_xmax, r_ymax), (0,255,0), 2 )
+                cv2.putText(orig_frame, 'Right', (r_xmin, r_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0,255,0), 1)
 
-            # g_l_xmin, g_l_ymin, g_l_xmax, g_l_ymax = boxes[0][0], boxes[0][1], boxes[0][2], boxes[0][3]
-            # g_r_xmin, g_r_ymin, g_r_xmax, g_r_ymax = boxes[1][0], boxes[1][1], boxes[1][2], boxes[1][3]
+            g_l_xmin, g_l_ymin, g_l_xmax, g_l_ymax = boxes[0][0], boxes[0][1], boxes[0][2], boxes[0][3]
+            g_r_xmin, g_r_ymin, g_r_xmax, g_r_ymax = boxes[1][0], boxes[1][1], boxes[1][2], boxes[1][3]
 
 
-            # if not (labels[0]==0):
-            #     cv2.rectangle(orig_frame,(g_l_xmin, g_l_ymin), (g_l_xmax, g_l_ymax), (255,0,0), 2 )
-            #     cv2.putText(orig_frame, 'Left', (g_l_xmin, g_l_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,0,0), 1)
-            # if not (labels[1]==0):
-            #     cv2.rectangle(orig_frame,(g_r_xmin, g_r_ymin), (g_r_xmax, g_r_ymax), (255,0,0), 2 )
-            #     cv2.putText(orig_frame, 'Right', (g_r_xmin, g_r_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,0,0), 1)
+            if not (labels[0]==0):
+                cv2.rectangle(orig_frame,(g_l_xmin, g_l_ymin), (g_l_xmax, g_l_ymax), (255,0,0), 2 )
+                cv2.putText(orig_frame, 'Left', (g_l_xmin, g_l_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,0,0), 1)
+            if not (labels[1]==0):
+                cv2.rectangle(orig_frame,(g_r_xmin, g_r_ymin), (g_r_xmax, g_r_ymax), (255,0,0), 2 )
+                cv2.putText(orig_frame, 'Right', (g_r_xmin, g_r_ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,0,0), 1)
 
-            # # plt.imshow(orig_frame)
-            # # plt.show()
-            # image = Image.fromarray(orig_frame)
-            # print(foot_id)
-            # image.save("/home/noldsoul/Desktop/Uplara/keras_object_detection/src/object_detection/results/"+ str(foot_id) +".jpg")
-            # if count > 200:
-            #     break
-            # # count +=1
-            #     # plt.imshow(image.astype(np.uint8))
-            #     # plt.show()
-            #     # image = (image[0] / 255 ) - 1
-            #     # plt.imshow(image)
-            #     # plt.show(image)
+            # plt.imshow(orig_frame)
+            # plt.show()
+            image = Image.fromarray(orig_frame)
+            print(foot_id)
+            image.save("/home/noldsoul/Desktop/Uplara/keras_object_detection/src/object_detection/results/"+ str(foot_id) +".jpg")
+            if count > 200:
+                break
+            # count +=1
+                # plt.imshow(image.astype(np.uint8))
+                # plt.show()
+                # image = (image[0] / 255 ) - 1
+                # plt.imshow(image)
+                # plt.show(image)
